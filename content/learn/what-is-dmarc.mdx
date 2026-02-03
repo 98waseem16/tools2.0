@@ -1,0 +1,168 @@
+---
+title: 'What is DMARC? A Complete Guide to Email Authentication'
+description: 'Learn what DMARC is, how it works, and why it\'s essential for protecting your domain from email spoofing and phishing attacks.'
+date: '2024-01-15'
+author: 'Sendmarc Team'
+category: 'Email Authentication'
+tags: ['DMARC', 'email security', 'authentication', 'phishing protection']
+readingTime: '8 min read'
+---
+
+# What is DMARC?
+
+DMARC (Domain-based Message Authentication, Reporting, and Conformance) is an email authentication protocol that protects your domain from being used in email spoofing, phishing scams, and other cyberattacks. It builds on two existing authentication methods—SPF and DKIM—to provide a comprehensive framework for email security.
+
+## How DMARC Works
+
+DMARC allows domain owners to publish a policy in their DNS records that tells receiving mail servers how to handle emails that fail authentication checks. When an email is sent from your domain, the receiving server:
+
+1. **Checks SPF** - Verifies the sending server is authorized
+2. **Checks DKIM** - Validates the cryptographic signature
+3. **Checks DMARC alignment** - Ensures the From domain matches the authenticated domain
+4. **Applies the DMARC policy** - Takes action based on your instructions (none, quarantine, or reject)
+
+## DMARC Policy Levels
+
+DMARC has three policy levels that control what happens to emails that fail authentication:
+
+### p=none (Monitor Mode)
+- Emails that fail are delivered normally
+- You receive reports about authentication failures
+- Recommended for initial setup and monitoring
+- No impact on email delivery
+
+### p=quarantine (Cautious Mode)
+- Failed emails are sent to spam/junk folders
+- Legitimate emails still reach recipients
+- Good middle ground for protection while minimizing false positives
+- Recommended after monitoring phase shows no issues
+
+### p=reject (Maximum Protection)
+- Failed emails are completely blocked
+- Strongest protection against spoofing
+- Only use after thorough testing with p=none and p=quarantine
+- Prevents any unauthorized use of your domain
+
+## Why DMARC is Essential
+
+### Protection Against Phishing
+Attackers often impersonate legitimate domains to trick recipients into clicking malicious links or sharing sensitive information. DMARC prevents attackers from successfully spoofing your domain in the "From" field.
+
+### Brand Protection
+When attackers use your domain for phishing, it damages your brand reputation. Recipients associate the malicious emails with your company, even though you didn't send them. DMARC stops this brand abuse.
+
+### Improved Deliverability
+Email providers increasingly require DMARC for inbox delivery. Gmail and Yahoo Mail now mandate DMARC for bulk senders. Implementing DMARC improves your email deliverability and sender reputation.
+
+### Visibility and Reporting
+DMARC provides detailed reports about who is sending email on behalf of your domain. These reports help you:
+- Identify unauthorized senders
+- Discover misconfigured email services
+- Monitor authentication performance
+- Detect attempted spoofing attacks
+
+## DMARC Record Components
+
+A DMARC record is published as a DNS TXT record at `_dmarc.yourdomain.com`. Here's an example:
+
+```
+v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com; ruf=mailto:forensic@yourdomain.com; pct=100; adkim=s; aspf=s
+```
+
+Key tags explained:
+- **v=DMARC1** - Protocol version (required)
+- **p=** - Policy for the domain (none, quarantine, or reject)
+- **rua=** - Email address for aggregate reports
+- **ruf=** - Email address for forensic (failure) reports
+- **pct=** - Percentage of emails to apply policy to (1-100)
+- **adkim=** - DKIM alignment mode (r=relaxed, s=strict)
+- **aspf=** - SPF alignment mode (r=relaxed, s=strict)
+
+## DMARC Implementation Steps
+
+### 1. Set Up SPF and DKIM
+DMARC requires at least one of these authentication methods to be in place. Ideally, implement both for maximum protection.
+
+### 2. Start with p=none
+Begin with a monitoring-only policy to collect data without affecting email delivery:
+```
+v=DMARC1; p=none; rua=mailto:dmarc@yourdomain.com
+```
+
+### 3. Monitor Reports
+Review aggregate reports (sent daily) to identify:
+- All sources sending email from your domain
+- Authentication success rates
+- Potential issues with legitimate email services
+
+### 4. Fix Authentication Issues
+Address any problems with SPF or DKIM for your legitimate email sources. Common issues:
+- Missing SPF includes for email service providers
+- Incorrect DKIM selectors
+- SPF lookup limit exceeded (>10 lookups)
+
+### 5. Gradually Increase Enforcement
+After 2-4 weeks of monitoring with no issues:
+- Move to `p=quarantine` with `pct=10` (10% enforcement)
+- Gradually increase `pct` to 100
+- Finally move to `p=reject` for full protection
+
+## DMARC Alignment
+
+For DMARC to pass, the domain in the From header must align with either the SPF or DKIM authenticated domain.
+
+### Relaxed Alignment (Default)
+The organizational domains must match. For example:
+- From: sender@mail.example.com
+- SPF: example.com ✓ (passes)
+- DKIM: d=example.com ✓ (passes)
+
+### Strict Alignment
+The domains must match exactly:
+- From: sender@mail.example.com
+- SPF: mail.example.com ✓ (passes)
+- SPF: example.com ✗ (fails)
+
+## Common DMARC Mistakes
+
+### Implementing Too Quickly
+Moving directly to p=reject without monitoring can block legitimate email. Always start with p=none and monitor for several weeks.
+
+### Ignoring Reports
+DMARC reports contain valuable information about your email ecosystem. Review them regularly to identify issues and unauthorized senders.
+
+### Not Including All Email Sources
+Ensure your SPF record includes all services that send email on your behalf (marketing platforms, CRMs, transactional email services).
+
+### Forgetting Subdomains
+By default, DMARC policies don't apply to subdomains. Use the `sp=` tag to set a subdomain policy, or create separate DMARC records for important subdomains.
+
+## DMARC and Compliance
+
+Many industries now require DMARC as part of cybersecurity compliance:
+- **Financial Services** - Protect customer data and prevent fraud
+- **Healthcare** - HIPAA compliance and patient data protection
+- **Government** - Required by many government agencies
+- **E-commerce** - Prevent account takeover phishing attacks
+
+## Getting Started with DMARC
+
+Ready to implement DMARC for your domain? Follow these steps:
+
+1. [Check your current DMARC record](/tools/dmarc-checker)
+2. [Verify your SPF configuration](/tools/spf-checker)
+3. [Validate your DKIM setup](/tools/dkim-checker)
+4. Set up email addresses to receive DMARC reports
+5. Publish your initial DMARC record with p=none
+6. Monitor reports and fix any authentication issues
+7. Gradually enforce your DMARC policy
+
+## Conclusion
+
+DMARC is no longer optional—it's essential for protecting your domain, brand, and email deliverability. By implementing DMARC correctly, you gain visibility into your email ecosystem, prevent spoofing attacks, and ensure your legitimate emails reach recipients' inboxes.
+
+Start with monitoring, fix any authentication issues, and gradually enforce your policy for maximum protection without disrupting legitimate email.
+
+---
+
+**Need help implementing DMARC?** [Start your free trial](https://sendmarc.com/start-trial) with Sendmarc for automated DMARC management, real-time monitoring, and expert support.

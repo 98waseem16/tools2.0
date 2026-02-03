@@ -1,0 +1,318 @@
+---
+title: 'What is DKIM? DomainKeys Identified Mail Explained'
+description: 'Learn how DKIM email authentication works, why 2048-bit keys are essential, and how to set up DKIM signatures to prevent email tampering.'
+date: '2024-01-13'
+author: 'Sendmarc Team'
+category: 'Email Authentication'
+tags: ['DKIM', 'email security', 'cryptography', 'authentication', 'digital signatures']
+readingTime: '7 min read'
+---
+
+# What is DKIM?
+
+DKIM (DomainKeys Identified Mail) is an email authentication method that uses cryptographic signatures to verify that an email hasn't been tampered with during transit and that it actually came from the claimed domain. Unlike SPF which validates the sending server, DKIM validates the email content itself.
+
+## How DKIM Works
+
+DKIM uses public-key cryptography with two keys:
+
+### Private Key (Secret)
+- Stored securely on your mail server
+- Used to sign outgoing emails
+- Never shared or published
+- Must be protected like a password
+
+### Public Key (Published)
+- Published in your DNS records
+- Used by recipients to verify signatures
+- Anyone can access it
+- Located at `[selector]._domainkey.yourdomain.com`
+
+### The DKIM Process
+
+1. **Signing (Sender's Mail Server)**
+   - Your mail server creates a hash of specific email headers and body
+   - The hash is encrypted with your private key
+   - The encrypted signature is added to the email as a DKIM-Signature header
+
+2. **Verification (Recipient's Mail Server)**
+   - Receiving server extracts the DKIM-Signature header
+   - Retrieves your public key from DNS using the selector and domain
+   - Decrypts the signature with the public key
+   - Creates its own hash of the email
+   - Compares the hashes - if they match, DKIM passes
+
+## DKIM Signature Anatomy
+
+Here's a simplified DKIM-Signature header:
+
+```
+DKIM-Signature: v=1; a=rsa-sha256; d=example.com; s=default;
+  c=relaxed/relaxed; q=dns/txt;
+  h=from:to:subject:date;
+  bh=2jUSOH9NhtVGCQWNr9BrIAPreKQjO6Sn7XIkfJVOzv8=;
+  b=dzdVyOfAKCdLXdJOc9G2q8LoXSlEniSbav+yuU4zGeeruD00lszZ...
+```
+
+Key tags explained:
+- **v=1** - DKIM version
+- **a=rsa-sha256** - Algorithm (RSA with SHA-256 hashing)
+- **d=example.com** - Domain claiming responsibility
+- **s=default** - Selector (identifies which key to use)
+- **c=relaxed/relaxed** - Canonicalization (how to handle whitespace)
+- **h=** - Which headers are included in the signature
+- **bh=** - Body hash
+- **b=** - The actual encrypted signature
+
+## DKIM Selectors
+
+Selectors allow you to have multiple DKIM keys for the same domain. They're like nicknames for your keys.
+
+### Why Use Multiple Selectors?
+
+1. **Key Rotation** - Keep old selector active while deploying new one
+2. **Multiple Servers** - Different keys for different mail servers
+3. **Service Separation** - Separate keys for transactional vs marketing email
+4. **Provider Requirements** - Some ESPs require specific selectors
+
+### Common Selectors
+
+- **default** - General purpose
+- **google** - Google Workspace uses this
+- **selector1**, **selector2** - Microsoft 365 uses these
+- **k1**, **s1** - Generic alternates
+- **mail** - Common choice for mail servers
+
+### Selector in DNS
+
+If your selector is "default" and domain is "example.com", the public key is published at:
+```
+default._domainkey.example.com
+```
+
+## DKIM Key Sizes
+
+DKIM uses RSA encryption with different key sizes:
+
+### 1024-bit Keys (Deprecated)
+- **Security:** Weak by modern standards
+- **Status:** Deprecated, not recommended
+- **Issues:** Can be broken with sufficient computing power
+- **Usage:** Legacy systems only
+
+### 2048-bit Keys (Recommended)
+- **Security:** Strong, industry standard
+- **Status:** Required by most modern email providers
+- **Recommendation:** Use this size for all new DKIM implementations
+- **Future-proof:** Will remain secure for years to come
+
+### 4096-bit Keys (Overkill)
+- **Security:** Very strong
+- **Issues:** Some DNS servers have trouble with large TXT records
+- **Performance:** Slower to generate and verify
+- **Recommendation:** Usually unnecessary, stick with 2048-bit
+
+**Important:** Always use 2048-bit keys for new DKIM setups. If you still have 1024-bit keys, upgrade immediately.
+
+## DKIM DNS Record
+
+A DKIM public key is published as a TXT record. Example:
+
+```
+v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu5oIUrFDWZK7F4thFxpZa2or6jBEX3cSL6b2TJdPkO5iDnxDjHpGd0KpqhGkHt3KaSS5HNr7NKLoJOuRW/6mtuq9X7lrPn...
+```
+
+Key components:
+- **v=DKIM1** - DKIM version
+- **k=rsa** - Key type (RSA)
+- **p=** - Base64-encoded public key
+- **Optional tags:**
+  - **t=s** - Strict mode (subdomain can't use this key)
+  - **t=y** - Testing mode
+  - **n=** - Notes/comments
+
+## DKIM and Email Modifications
+
+DKIM can break if the email is modified in transit:
+
+### What Breaks DKIM
+
+- **Content Changes** - Modifying the email body
+- **Header Modifications** - Adding/changing signed headers
+- **Mailing List Footers** - Appending unsubscribe links
+- **Format Conversions** - HTML to plain text conversion
+- **Character Encoding Changes** - Unicode to ASCII conversion
+
+### Canonicalization Modes
+
+To handle minor modifications, DKIM supports canonicalization:
+
+**Simple Canonicalization (c=simple/simple)**
+- No modifications allowed
+- Whitespace changes break the signature
+- Most strict
+
+**Relaxed Canonicalization (c=relaxed/relaxed)**
+- Allows whitespace changes
+- Ignores trailing whitespace
+- Collapses multiple spaces
+- Most common, recommended
+
+## DKIM vs SPF
+
+DKIM and SPF serve different purposes:
+
+| Feature | DKIM | SPF |
+|---------|------|-----|
+| **Protects** | Email content | Sending IP |
+| **Survives Forwarding** | ✓ Yes | ✗ No |
+| **Prevents Tampering** | ✓ Yes | ✗ No |
+| **Easy to Set Up** | Moderate | Easy |
+| **Requires** | Key generation | IP listing |
+| **DNS Lookups** | 1 per signature | Up to 10 |
+
+**Best Practice:** Use both DKIM and SPF together with DMARC for complete protection.
+
+## Setting Up DKIM
+
+### 1. Generate Key Pair
+
+Use OpenSSL to generate a 2048-bit RSA key pair:
+
+```bash
+# Generate private key
+openssl genrsa -out default.private 2048
+
+# Extract public key
+openssl rsa -in default.private -pubout -outform PEM -out default.public
+
+# Format for DNS (remove headers and newlines)
+cat default.public | grep -v "BEGIN\|END" | tr -d "\n"
+```
+
+Use our [DKIM Generator](/tools/dkim-generator) for step-by-step instructions.
+
+### 2. Configure Mail Server
+
+Install the private key on your mail server and configure it to sign outgoing emails. Configuration varies by mail server:
+
+**Postfix + OpenDKIM:**
+```
+# Add to OpenDKIM config
+Domain                  example.com
+Selector                default
+KeyFile                 /etc/opendkim/keys/default.private
+```
+
+**Exim:**
+```
+# Add to Exim config
+dkim_domain = example.com
+dkim_selector = default
+dkim_private_key = /etc/exim/dkim/default.private
+```
+
+### 3. Publish Public Key in DNS
+
+Create a TXT record at `default._domainkey.example.com`:
+
+```
+v=DKIM1; k=rsa; p=<your_public_key_here>
+```
+
+Replace `<your_public_key_here>` with the output from the OpenSSL command (without headers or newlines).
+
+### 4. Test DKIM
+
+1. Send a test email to yourself
+2. Check the email headers for `DKIM-Signature`
+3. Use our [DKIM Checker](/tools/dkim-checker) to verify the public key
+4. Send to a test service that validates DKIM
+
+## DKIM Best Practices
+
+### Use 2048-bit Keys
+Never use 1024-bit keys for new setups. Upgrade existing 1024-bit keys to 2048-bit immediately.
+
+### Sign Important Headers
+At minimum, sign these headers (h= tag):
+- **from** - Critical for authentication
+- **to** - Prevents address changes
+- **subject** - Prevents subject tampering
+- **date** - Validates timestamp
+- **message-id** - Unique identifier
+
+### Use Multiple Selectors for Key Rotation
+Keep the old selector active during rotation:
+1. Generate new key with new selector (e.g., "default2")
+2. Publish new public key in DNS
+3. Configure mail server to use new key
+4. Wait 48-72 hours
+5. Remove old selector from DNS
+
+### Protect Private Keys
+- Store with restricted permissions (`chmod 600`)
+- Never transmit private keys
+- Generate keys on the mail server, not remotely
+- Back up keys securely
+
+### Use Relaxed Canonicalization
+Use `c=relaxed/relaxed` to handle minor email modifications without breaking signatures.
+
+### Monitor DKIM Performance
+Check DMARC reports to see:
+- DKIM pass rates
+- Which selectors are being used
+- Signature failures
+
+## Common DKIM Issues
+
+### DKIM Signature Not Found
+**Cause:** Mail server isn't signing emails
+**Fix:** Check mail server configuration, ensure private key is accessible
+
+### DKIM Verification Failed
+**Cause:** Public key doesn't match private key, or DNS record is wrong
+**Fix:** Verify DNS TXT record matches the public key, check for typos
+
+### Selector Not Found
+**Cause:** DNS record doesn't exist or has wrong name
+**Fix:** Ensure record is at `[selector]._domainkey.[domain]`, check DNS propagation
+
+### Key Size Too Small
+**Cause:** Using 1024-bit key (deprecated)
+**Fix:** Generate new 2048-bit key, update DNS and mail server
+
+## DKIM and DMARC Alignment
+
+For DMARC to pass via DKIM:
+- DKIM signature must be valid (cryptographic verification passes)
+- The `d=` domain in DKIM signature must align with the From header domain
+
+**Relaxed Alignment** (default):
+- Organizational domains must match
+- mail.example.com aligns with example.com ✓
+
+**Strict Alignment** (optional):
+- Domains must match exactly
+- mail.example.com does not align with example.com ✗
+
+## Getting Started with DKIM
+
+1. [Generate DKIM keys](/tools/dkim-generator) using our secure guide
+2. Configure your mail server to sign emails
+3. Publish the public key in DNS
+4. [Verify your DKIM setup](/tools/dkim-checker)
+5. Send test emails and check headers
+6. Monitor with DMARC reports
+7. Set up key rotation schedule (every 6-12 months)
+
+## Conclusion
+
+DKIM provides strong email authentication through cryptographic signatures, protecting against email tampering and impersonation. Unlike SPF, DKIM signatures survive email forwarding, making it essential for modern email security.
+
+Always use 2048-bit keys, sign important headers, and combine DKIM with SPF and DMARC for comprehensive protection against email-based attacks.
+
+---
+
+**Need help with DKIM?** [Start your free trial](https://sendmarc.com/start-trial) with Sendmarc for automated DKIM monitoring, key rotation reminders, and expert configuration support.

@@ -1,0 +1,271 @@
+---
+title: 'What is SPF? Understanding Sender Policy Framework'
+description: 'Learn how SPF (Sender Policy Framework) works, why the 10 DNS lookup limit matters, and how to optimize your SPF record for email authentication.'
+date: '2024-01-14'
+author: 'Sendmarc Team'
+category: 'Email Authentication'
+tags: ['SPF', 'email security', 'DNS', 'authentication', 'email deliverability']
+readingTime: '7 min read'
+---
+
+# What is SPF?
+
+SPF (Sender Policy Framework) is an email authentication method that allows domain owners to specify which mail servers are authorized to send email on behalf of their domain. By publishing an SPF record in DNS, you tell receiving mail servers which IPs should be trusted when they see emails claiming to come from your domain.
+
+## How SPF Works
+
+When an email is sent, the receiving mail server performs an SPF check:
+
+1. **Extract the domain** from the email's return-path (envelope sender)
+2. **Look up the SPF record** in DNS for that domain
+3. **Check if the sending IP** is authorized in the SPF record
+4. **Return a result** (pass, fail, softfail, neutral, or none)
+
+If the sending IP is authorized, the email passes SPF authentication. If not, the receiving server can reject or flag the email based on the SPF qualifier used.
+
+## SPF Record Structure
+
+An SPF record is a TXT record that starts with `v=spf1` followed by mechanisms that define authorized senders. Here's an example:
+
+```
+v=spf1 ip4:192.0.2.0/24 include:_spf.google.com include:spf.protection.outlook.com -all
+```
+
+### SPF Mechanisms
+
+Mechanisms define which IPs or domains are authorized to send email:
+
+- **ip4:** - Authorizes specific IPv4 addresses or CIDR blocks
+  - `ip4:192.0.2.1` (single IP)
+  - `ip4:192.0.2.0/24` (subnet)
+
+- **ip6:** - Authorizes IPv6 addresses
+  - `ip6:2001:db8::1`
+  - `ip6:2001:db8::/32`
+
+- **include:** - References another domain's SPF record
+  - `include:_spf.google.com`
+  - Used for email service providers
+
+- **a:** - Authorizes the domain's A record IPs
+  - `a:mail.example.com`
+
+- **mx:** - Authorizes the domain's MX record IPs
+  - `mx:example.com`
+
+- **all:** - Matches everything (used at the end)
+  - Must have a qualifier
+
+### SPF Qualifiers
+
+Qualifiers tell receiving servers what to do with emails:
+
+- **+ (Pass)** - Accept the email (default if no qualifier)
+  - `+ip4:192.0.2.1`
+  - Usually omitted: `ip4:192.0.2.1`
+
+- **- (Fail)** - Reject the email
+  - `-all` (hardfail - strict rejection)
+  - Recommended for security
+
+- **~ (SoftFail)** - Accept but mark suspicious
+  - `~all` (softfail - flag as suspicious)
+  - Less secure than `-all`
+
+- **? (Neutral)** - No statement (treat as unknown)
+  - `?all` (neutral)
+  - Not recommended
+
+## The Critical 10 DNS Lookup Limit
+
+**This is the most important SPF limitation to understand.**
+
+SPF has a hard limit of 10 DNS lookups. If your SPF record causes more than 10 lookups, SPF fails completely—even if the sending IP is authorized.
+
+### What Counts as a Lookup?
+
+- **include:** mechanisms (1 lookup each)
+- **a:** mechanisms (1 lookup each)
+- **mx:** mechanisms (1 lookup each)
+- **redirect=** modifier (1 lookup)
+- **Nested includes** count toward the limit
+- **ip4:** and **ip6:** do NOT count (no DNS lookup needed)
+
+### Example: Counting Lookups
+
+```
+v=spf1 include:_spf.google.com include:spf.protection.outlook.com include:servers.mcsv.net a:mail.example.com mx -all
+```
+
+This record has **6 DNS lookups**:
+1. `include:_spf.google.com` (1 lookup, plus any nested includes)
+2. `include:spf.protection.outlook.com` (1 lookup, plus nested)
+3. `include:servers.mcsv.net` (1 lookup, plus nested)
+4. `a:mail.example.com` (1 lookup)
+5. `mx` (1 lookup to find MX records)
+
+Note: Each `include:` may trigger additional lookups for nested includes, which also count toward the 10-lookup limit.
+
+## Common SPF Mistakes
+
+### 1. Multiple SPF Records
+
+**Wrong:**
+```
+v=spf1 ip4:192.0.2.1 -all
+v=spf1 include:_spf.google.com -all
+```
+
+Having multiple SPF records makes ALL of them invalid per RFC specifications. Combine all mechanisms into a single record.
+
+### 2. Using ~all Instead of -all
+
+**Weak:**
+```
+v=spf1 include:_spf.google.com ~all
+```
+
+**Strong:**
+```
+v=spf1 include:_spf.google.com -all
+```
+
+Use `-all` (hardfail) to strictly reject unauthorized senders. Using `~all` (softfail) is less secure and may allow spoofing.
+
+### 3. Exceeding 10 DNS Lookups
+
+**Problem:**
+```
+v=spf1 include:service1.com include:service2.com include:service3.com include:service4.com include:service5.com include:service6.com include:service7.com include:service8.com include:service9.com include:service10.com -all
+```
+
+This will likely exceed 10 lookups when nested includes are counted. Solution: Flatten your SPF record by replacing includes with IP addresses.
+
+### 4. Not Including All Email Services
+
+If you use email marketing platforms, CRMs, or transactional email services, they must be included in your SPF record. Missing services cause SPF failures for legitimate emails.
+
+## SPF Optimization Strategies
+
+### 1. Use IP Addresses Instead of Includes
+
+Replace includes with the actual IP addresses to reduce DNS lookups:
+
+**Before:**
+```
+v=spf1 include:servers.mcsv.net -all
+```
+
+**After:**
+```
+v=spf1 ip4:198.2.128.0/24 ip4:198.2.186.0/24 -all
+```
+
+### 2. Use CIDR Notation
+
+Consolidate multiple IP addresses into CIDR blocks:
+
+**Before:**
+```
+v=spf1 ip4:192.0.2.1 ip4:192.0.2.2 ip4:192.0.2.3 -all
+```
+
+**After:**
+```
+v=spf1 ip4:192.0.2.0/24 -all
+```
+
+Use our [CIDR Calculator](/tools/cidr-calculator) to convert IP ranges to CIDR notation.
+
+### 3. Remove Unnecessary Mechanisms
+
+- Don't use `a` or `mx` unless you actually send from those servers
+- Remove includes for services you no longer use
+- Audit your SPF record regularly
+
+### 4. Use SPF Flattening Services
+
+SPF flattening services automatically convert includes to IP addresses, keeping you under the 10-lookup limit. However, you must update the flattened record when service providers change IPs.
+
+## SPF and Email Forwarding
+
+SPF has a known limitation with email forwarding. When an email is forwarded:
+
+1. Original sender: user@example.com
+2. Forwarding server: forwards the email
+3. Final recipient: receives email with original From but new sending IP
+
+The forwarding server's IP won't match example.com's SPF record, causing SPF to fail. Solutions:
+
+- **SRS (Sender Rewriting Scheme)** - Forwarding server rewrites the return-path
+- **DMARC alignment** - Use DKIM alignment instead of SPF alignment
+- Accept that SPF may fail for forwarded emails (DKIM still works)
+
+## SPF Testing
+
+After setting up SPF, test your configuration:
+
+1. [Check your SPF record](/tools/spf-checker) - Verify syntax and lookup count
+2. [Test SPF evaluation](/tools/spf-policy-tester) - See if specific IPs pass
+3. Send test emails and check headers for SPF results
+4. Monitor for SPF failures in your DMARC reports
+
+## SPF Best Practices
+
+### Start with Monitoring
+Begin with a permissive SPF record to avoid blocking legitimate email:
+```
+v=spf1 ?all
+```
+Then gradually make it stricter as you identify all authorized senders.
+
+### Document Your SPF Record
+Keep a list of:
+- All email services you use
+- Which mechanisms authorize each service
+- When you last audited the record
+
+### Stay Under 10 Lookups
+Regularly count your DNS lookups, especially when adding new email services. Our [SPF Checker](/tools/spf-checker) automatically counts lookups for you.
+
+### Use -all for Security
+Once you've identified all legitimate senders, use `-all` (hardfail) to strictly reject unauthorized emails:
+```
+v=spf1 include:_spf.google.com ip4:192.0.2.0/24 -all
+```
+
+### Regular Audits
+Review your SPF record quarterly:
+- Remove services you no longer use
+- Add new email services
+- Optimize to stay under 10 lookups
+- Verify all mechanisms are still needed
+
+## SPF and DMARC
+
+SPF works best when combined with DMARC:
+
+- **SPF alone** - Only protects the return-path (envelope sender)
+- **SPF + DMARC** - Also protects the From header (what users see)
+
+DMARC requires SPF (or DKIM) to align with the From domain. Use both for complete protection against spoofing.
+
+## Getting Started with SPF
+
+1. [Check if you have an SPF record](/tools/spf-checker)
+2. List all services that send email for your domain
+3. Create your SPF record with all authorized senders
+4. Verify you're under 10 DNS lookups
+5. Publish the record in DNS
+6. Test with email sends
+7. Monitor and optimize regularly
+
+## Conclusion
+
+SPF is a fundamental email authentication method that prevents unauthorized use of your domain. While the 10 DNS lookup limit can be challenging, proper planning and optimization ensure your SPF record remains valid and effective.
+
+Remember: SPF is most powerful when combined with DKIM and DMARC for comprehensive email security.
+
+---
+
+**Need help managing SPF?** [Start your free trial](https://sendmarc.com/start-trial) with Sendmarc for automated SPF monitoring, optimization, and lookup counting.
