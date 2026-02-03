@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Container } from '@/components/layout'
 import { DomainInput } from '@/components/domain-input'
 import { validateAndNormalizeDomain } from '@/lib/utils/domain'
+import { getBaseUrl } from '@/lib/utils'
 
 interface PageProps {
   params: Promise<{ domain: string }>
@@ -34,7 +35,7 @@ export default async function AnalyzePage({ params }: PageProps) {
   }
 
   // Fetch analysis results
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   const response = await fetch(`${baseUrl}/api/analyze/${domain}`, {
     cache: 'no-store', // Always get fresh data for now
   })

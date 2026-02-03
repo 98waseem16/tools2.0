@@ -12,6 +12,7 @@ import SPFAnalysisClient from '@/components/tools/spf/SPFAnalysisClient'
 import SPFRecordDisplay from '@/components/tools/spf/SPFRecordDisplay'
 import MarcyWidget from '@/components/tools/spf/MarcyWidget'
 import StatsBar from '@/components/tools/spf/StatsBar'
+import { getBaseUrl } from '@/lib/utils'
 
 interface PageProps {
   params: Promise<{ domain: string }>
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 // Fetch SPF analysis data
 async function getSPFAnalysis(domain: string): Promise<SPFAnalysisResult> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = getBaseUrl()
   const res = await fetch(`${baseUrl}/api/tools/spf-checker/${domain}`, {
     cache: 'no-store',
   })
