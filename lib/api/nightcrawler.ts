@@ -3,7 +3,7 @@
  * Wrapper functions for all Nightcrawler endpoints
  */
 
-import { createAPIClient } from './client'
+import { createAPIClient, type APIClient } from './client'
 
 export type LookupStrategy = 'fast' | 'fresh'
 
@@ -195,9 +195,14 @@ export interface NightcrawlerScoreResponse {
 
 /**
  * Nightcrawler API Client
+ * Client is created lazily on first use so the build can succeed without env vars.
  */
 class NightcrawlerAPI {
-  private client = createAPIClient()
+  private _client: APIClient | null = null
+  private get client(): APIClient {
+    if (!this._client) this._client = createAPIClient()
+    return this._client
+  }
 
   /**
    * Build query string from options
