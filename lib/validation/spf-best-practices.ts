@@ -293,11 +293,12 @@ const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     validator: (parsed, record, response) => {
       if (!parsed) return null
 
-      if (parsed.recordSize > 400) {
+      const recordSize = parsed.recordSize ?? 0
+      if (recordSize > 400) {
         return {
           id: 'bp-record-size',
           status: 'fail',
-          message: `SPF record is ${parsed.recordSize} characters (critically long)`,
+          message: `SPF record is ${recordSize} characters (critically long)`,
           details: formatCheckDetails(
             [
               'Record exceeds recommended DNS TXT limits',
@@ -315,11 +316,11 @@ const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
         }
       }
 
-      if (parsed.recordSize > 255) {
+      if (recordSize > 255) {
         return {
           id: 'bp-record-size',
           status: 'warning',
-          message: `SPF record is ${parsed.recordSize} characters (exceeds single string limit)`,
+          message: `SPF record is ${recordSize} characters (exceeds single string limit)`,
           details: formatCheckDetails(
             [
               'Records >255 chars may be split or truncated',

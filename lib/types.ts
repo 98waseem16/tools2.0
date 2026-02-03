@@ -36,7 +36,7 @@ export interface DMARCParsed {
     spf: AlignmentMode
     dkim: AlignmentMode
   }
-  failureOptions: string | null    // fo tag
+  failureOptions: string[] | null   // fo tag (failure reporting options)
   reportInterval: number | null    // ri tag (seconds)
 }
 
@@ -54,6 +54,8 @@ export interface DMARCAnalysis {
 // ===================
 
 export type SPFQualifier = '+' | '-' | '~' | '?'
+/** Final "all" mechanism value: -all, ~all, +all, ?all */
+export type SPFAllQualifier = '-all' | '~all' | '+all' | '?all'
 export type SPFMechanismType = 'all' | 'include' | 'a' | 'mx' | 'ip4' | 'ip6' | 'exists' | 'redirect' | 'ptr'
 export type SPFStatus = 'valid' | 'invalid' | 'missing' | 'permerror' | 'temperror'
 export type ServiceStatus = 'good' | 'caution' | 'warning'
@@ -82,7 +84,7 @@ export interface DetectedService {
 export interface SPFParsed {
   version: string
   mechanisms: SPFMechanism[]
-  allQualifier: SPFQualifier       // The final -all, ~all, etc.
+  allQualifier: SPFAllQualifier   // The final -all, ~all, +all, ?all
   lookupCount: number
   secondaryLookupCount?: number    // Lookups from nested includes
   voidLookupCount?: number         // NXDOMAIN responses

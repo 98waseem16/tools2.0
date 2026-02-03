@@ -83,7 +83,7 @@ export function parseSPFResponse(
     ? {
         version: 'spf1',
         mechanisms: mechanisms,
-        allQualifier: (summary.all_qualifier === '~' ? '~all' : summary.all_qualifier === '-' ? '-all' : '+all') as SPFQualifier,
+        allQualifier: summary.all_qualifier === '~' ? '~all' : summary.all_qualifier === '-' ? '-all' : summary.all_qualifier === '?' ? '?all' : '+all',
         lookupCount: lookupCount,
         secondaryLookupCount: summary.num_secondary_lookup || 0,
         voidLookupCount: summary.num_void_lookup || 0,

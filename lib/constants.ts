@@ -537,7 +537,7 @@ export const EMAIL_PROVIDERS: EmailProvider[] = [
   { name: 'Zoho Mail', patterns: ['zoho.com', 'zoho.eu', 'zoho.in'], icon: '/icons/zoho.svg' },
   { name: 'ProtonMail', patterns: ['protonmail.ch', 'proton.me'], icon: '/icons/protonmail.svg' },
   { name: 'Fastmail', patterns: ['messagingengine.com', 'fastmail.com'], icon: '/icons/fastmail.svg' },
-  { name: 'Mimecast', patterns: ['mimecast.com', '_netblocks.mimecast.com'], icon: '/icons/mimecast.svg', category: 'email-provider', status: 'good' },
+  { name: 'Mimecast', patterns: ['mimecast.com', '_netblocks.mimecast.com'], icon: '/icons/mimecast.svg' },
   { name: 'Proofpoint', patterns: ['pphosted.com', 'proofpoint.com'], icon: '/icons/proofpoint.svg' },
   { name: 'Barracuda', patterns: ['barracudanetworks.com', 'barracuda.com'], icon: '/icons/barracuda.svg' },
   { name: 'GoDaddy', patterns: ['secureserver.net'], icon: '/icons/godaddy.svg' },
